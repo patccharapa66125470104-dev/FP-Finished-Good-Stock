@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FP Finished Good Stock — Executive Dashboard</title>
+<!-- หมายเหตุ: กราฟทั้งหมดวาดด้วย SVG ล้วน ไม่พึ่งไลบรารีภายนอก (CDN) เพื่อให้แสดงผลได้แน่นอน
+     แม้อยู่หลัง Firewall/CSP ขององค์กรที่บล็อกสคริปต์บุคคลที่สาม -->
+<style>
+  :root{
+    --navy-900:#0B1F3D;
+    --navy-800:#123566;
+    --blue-600:#1B5FA8;
+    --blue-400:#4C8FD9;
+    --sky-100:#EAF2FC;
+    --bg:#F2F5FA;
+    --card:#FFFFFF;
+    --ink:#0E1B2C;
+    --muted:#5B6B82;
+    --line:#E3E9F1;
+    --teal:#0FB6A6;
+    --amber:#F5A524;
+    --green:#1E9E5A;
+    --red:#E4574C;
+    --radius:14px;
+    --shadow:0 4px 18px rgba(15,35,70,.08);
+    --shadow-lg:0 10px 30px rgba(15,35,70,.14);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:'Segoe UI','Sarabun',-apple-system,Helvetica,Arial,sans-serif;
+    height:100%;
+  }
+  body{overflow-y:auto;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:#C4D2E6;border-radius:10px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+
+  .wrap{max-width:1440px;margin:0 auto;padding:0 20px 40px;}
+
+  /* ===== Header ===== */
+  header.app-header{
+    background:linear-gradient(120deg,var(--navy-900) 0%,var(--navy-800) 45%,var(--blue-600) 100%);
+    color:#fff;
+    padding:18px 24px;
+    position:sticky;top:0;z-index:50;
+    box-shadow:var(--shadow-lg);
+  }
+  .header-row{
+    max-width:1440px;margin:0 auto;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:14px;}
+  .brand .logo{
+    width:44px;height:44px;border-radius:12px;
+    background:rgba(255,255,255,.14);
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;
+  }
+  .brand h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.2px;}
+  .brand p{margin:2px 0 0;font-size:12px;color:#CFE0F7;font-weight:400;}
+  .header-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .live-pill{
+    display:flex;align-items:center;gap:6px;
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.25);
+    padding:6px 12px;border-radius:999px;font-size:12px;color:#DCEBFF;
+  }
+  .live-dot{width:8px;height:8px;border-radius:50%;background:#3CE888;box-shadow:0 0 0 0 rgba(60,232,136,.6);animation:pulse 1.8s infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(60,232,136,.55);}
+    70%{box-shadow:0 0 0 8px rgba(60,232,136,0);}
+    100%{box-shadow:0 0 0 0 rgba(60,232,136,0);}
+  }
+  .btn{
+    border:none;cursor:pointer;font-family:inherit;font-weight:600;font-size:13px;
+    padding:9px 16px;border-radius:10px;display:inline-flex;align-items:center;gap:7px;
+    transition:transform .12s ease, box-shadow .12s ease, background .12s ease;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-light{background:#fff;color:var(--navy-800);}
+  .btn-light:hover{box-shadow:0 4px 14px rgba(255,255,255,.35);}
+  .btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3);}
+  .btn-ghost:hover{background:rgba(255,255,255,.22);}
+  .btn-outline{background:#fff;color:var(--navy-800);border:1px solid var(--line);}
+  .btn-outline:hover{background:var(--sky-100);}
+  .btn-reset{background:#fff;color:var(--red);border:1px solid #F4C6C2;}
+  .btn-reset:hover{background:#FDEEED;}
+
+  /* ===== Section titles ===== */
+  .section-title{
+    font-size:14px;font-weight:700;color:var(--navy-800);
+    display:flex;align-items:center;gap:8px;margin:26px 2px 12px;
+    text-transform:uppercase;letter-spacing:.6px;
+  }
+  .section-title .bar{width:5px;height:16px;background:var(--blue-600);border-radius:3px;}
+
+  /* ===== Filter Bar ===== */
+  .filter-card{
+    background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:18px 20px;margin-top:-18px;position:relative;z-index:10;
+    display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;
+  }
+  .field{display:flex;flex-direction:column;gap:6px;min-width:150px;flex:1 1 150px;}
+  .field label{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+  .field select, .field input[type=date]{
+    padding:9px 10px;border-radius:9px;border:1.5px solid var(--line);
+    font-family:inherit;font-size:13px;color:var(--ink);background:#fff;
+    outline:none;transition:border-color .12s;
+  }
+  .field select:focus, .field input[type=date]:focus{border-color:var(--blue-400);}
+  .filter-actions{display:flex;gap:10px;flex:0 0 auto;}
+
+  /* ===== KPI cards ===== */
+  .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .kpi-card{
+    background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:20px 22px;position:relative;overflow:hidden;
+  }
+  .kpi-card::before{
+    content:'';position:absolute;top:0;left:0;width:100%;height:4px;
+  }
+  .kpi-card.c1::before{background:linear-gradient(90deg,var(--blue-600),var(--blue-400));}
+  .kpi-card.c2::before{background:linear-gradient(90deg,var(--teal),#37D6C4);}
+  .kpi-card.c3::before{background:linear-gradient(90deg,var(--green),#59C87F);}
+  .kpi-label{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+  .kpi-icon{font-size:20px;margin-bottom:6px;display:block;}
+  .kpi-value{font-size:24px;font-weight:800;color:var(--navy-900);line-height:1.25;word-break:break-word;}
+  .kpi-sub{font-size:12px;color:var(--muted);margin-top:6px;}
+  .kpi-value.remain-pos{color:var(--green);}
+  .kpi-value.remain-zero{color:var(--muted);}
+
+  /* ===== Charts ===== */
+  .chart-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;}
+  .chart-card{
+    background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:18px 20px 10px;display:flex;flex-direction:column;
+  }
+  .chart-card h3{margin:0 0 4px;font-size:14px;color:var(--navy-900);}
+  .chart-card .hint{font-size:11.5px;color:var(--muted);margin:0 0 10px;}
+  .chart-holder{position:relative;height:300px;}
+  .svg-chart{width:100%;height:100%;}
+  .svg-chart svg{width:100%;height:100%;display:block;overflow:visible;}
+  .svg-chart .bar-rect{transition:opacity .15s;}
+  .svg-chart .bar-rect:hover{opacity:.8;}
+  .svg-chart .axis-line{stroke:#E3E9F1;stroke-width:1;}
+  .svg-chart .grid-line{stroke:#EEF2F8;stroke-width:1;}
+  .svg-chart .axis-label{fill:#5B6B82;font-size:10px;}
+  .svg-chart .value-label{fill:#0E1B2C;font-size:9.5px;font-weight:700;}
+  .chart-legend{display:flex;gap:16px;margin-bottom:6px;flex-wrap:wrap;}
+  .chart-legend .item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:600;}
+  .chart-legend .dot{width:10px;height:10px;border-radius:3px;display:inline-block;}
+  .donut-flex{display:flex;align-items:center;gap:18px;height:100%;flex-wrap:wrap;}
+  .donut-flex svg{flex:0 0 auto;width:190px;height:190px;}
+  .donut-legend{flex:1 1 160px;display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;padding-right:4px;}
+  .donut-legend .row{display:flex;align-items:center;gap:8px;font-size:12px;}
+  .donut-legend .dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;}
+  .donut-legend .name{flex:1;color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .donut-legend .val{color:var(--muted);font-variant-numeric:tabular-nums;font-weight:700;}
+  .donut-center-val{font-size:15px;font-weight:800;fill:var(--navy-900);}
+  .donut-center-lbl{font-size:8.5px;fill:var(--muted);}
+
+  /* ===== Table ===== */
+  .table-card{
+    background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:18px 20px;
+  }
+  .table-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;}
+  .table-toolbar .count{font-size:12.5px;color:var(--muted);}
+  .table-scroll{overflow:auto;max-height:520px;border:1px solid var(--line);border-radius:10px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:920px;}
+  thead th{
+    position:sticky;top:0;background:var(--navy-800);color:#fff;
+    padding:10px 12px;text-align:left;font-weight:600;font-size:12px;z-index:2;
+    white-space:nowrap;
+  }
+  tbody td{padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  tbody tr:hover{background:var(--sky-100);}
+  tbody tr:nth-child(even){background:#FAFCFF;}
+  tbody tr:nth-child(even):hover{background:var(--sky-100);}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .remain-green{color:var(--green);font-weight:700;}
+  .remain-hidden{color:#fff;}
+  .tag{
+    display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;
+    background:var(--sky-100);color:var(--blue-600);
+  }
+
+  .empty-state{padding:40px;text-align:center;color:var(--muted);font-size:13px;}
+  footer.foot{text-align:center;color:var(--muted);font-size:11.5px;margin-top:26px;padding-top:10px;}
+
+  @media (max-width:980px){
+    .kpi-grid{grid-template-columns:1fr;}
+    .chart-grid{grid-template-columns:1fr;}
+  }
+
+  /* ===== Print ===== */
+  @media print{
+    header.app-header, .filter-card, .header-actions, .btn, .table-toolbar .btn, .no-print{display:none !important;}
+    body{background:#fff;}
+    .table-scroll{max-height:none;overflow:visible;border:none;}
+    .kpi-card,.chart-card,.table-card{box-shadow:none;border:1px solid #ddd;}
+    thead th{background:#0B1F3D !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-row">
+    <div class="brand">
+      <div class="logo">📦</div>
+      <div>
+        <h1>FP Finished Good Stock</h1>
+        <p>Executive Dashboard — สรุปยอดเข้า / ออก / คงเหลือ แบบ Real-time</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="live-pill"><span class="live-dot"></span><span id="lastUpdated">กำลังโหลดข้อมูล…</span></div>
+      <button class="btn btn-ghost" id="btnRefresh">🔄 รีเฟรชข้อมูล</button>
+      <button class="btn btn-light" id="btnExport">⬇️ Export CSV</button>
+      <button class="btn btn-light" id="btnPrint">🖨️ Print Report</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- Filter Bar -->
+  <div class="filter-card no-print">
+    <div class="field">
+      <label>วันที่ผลิต (Mfg. Date)</label>
+      <input type="date" id="fStart">
+    </div>
+    <div class="field">
+      <label>Product Name</label>
+      <select id="fProduct"><option value="">ทั้งหมด</option></select>
+    </div>
+    <div class="field">
+      <label>Batch No.</label>
+      <select id="fBatch"><option value="">ทั้งหมด</option></select>
+    </div>
+    <div class="field">
+      <label>สถานะคงเหลือ</label>
+      <select id="fStatus">
+        <option value="">ทั้งหมด</option>
+        <option value="remain">ยังมีคงเหลือ</option>
+        <option value="empty">หมดแล้ว</option>
+      </select>
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-outline" id="btnReset">↺ Reset</button>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="section-title"><span class="bar"></span> ภาพรวมตามที่เลือก (KPI)</div>
+  <div class="kpi-grid">
+    <div class="kpi-card c1">
+      <span class="kpi-icon">🏷️</span>
+      <div class="kpi-label">Product Name</div>
+      <div class="kpi-value" id="kpiProduct">— เลือก Product ด้านบน —</div>
+      <div class="kpi-sub" id="kpiProductSub">ทั้งหมด <span id="kpiProductCount">0</span> รายการ</div>
+    </div>
+    <div class="kpi-card c2">
+      <span class="kpi-icon">🧾</span>
+      <div class="kpi-label">Batch No.</div>
+      <div class="kpi-value" id="kpiBatch">— เลือก Batch ด้านบน —</div>
+      <div class="kpi-sub" id="kpiBatchSub">Mfg. Date: -</div>
+    </div>
+    <div class="kpi-card c3">
+      <span class="kpi-icon">🛢️</span>
+      <div class="kpi-label">ยอดคงเหลือ (เฉพาะ Batch นี้ ต่อชีท)</div>
+      <div class="kpi-value" id="kpiRemain">-</div>
+      <div class="kpi-sub" id="kpiRemainSub">ถัง (Kgs.: -)</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="section-title"><span class="bar"></span> แนวโน้มและสัดส่วนสินค้าคงคลัง</div>
+  <div class="chart-grid">
+    <div class="chart-card">
+      <h3>ปริมาณรับเข้า (Drum) เทียบ เบิกออก (Drum) รายปี</h3>
+      <p class="hint">อิงตามปีที่ผลิต (Mfg. Date) และตัวกรองที่เลือกด้านบน</p>
+      <div class="chart-legend">
+        <span class="item"><span class="dot" style="background:#1B5FA8"></span>รับเข้า (Drum)</span>
+        <span class="item"><span class="dot" style="background:#F5A524"></span>เบิกออก (Drum)</span>
+      </div>
+      <div class="chart-holder"><div id="chartInOut" class="svg-chart"></div></div>
+    </div>
+    <div class="chart-card">
+      <h3>สัดส่วนยอดคงเหลือ แยกตาม Product Name</h3>
+      <p class="hint">รวมยอดคงเหลือ (ถัง) ของทุก Batch ในแต่ละประเภทสินค้า</p>
+      <div class="chart-holder"><div id="chartRemainPie" class="svg-chart"></div></div>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="section-title"><span class="bar"></span> ตารางข้อมูลสรุปรายละเอียด</div>
+  <div class="table-card">
+    <div class="table-toolbar">
+      <div class="count"><span id="rowCount">0</span> รายการ (Batch ที่ยังมีสต็อกคงเหลือ)</div>
+    </div>
+    <div class="table-scroll">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>Product Name</th>
+            <th>Batch No.</th>
+            <th>Mfg. Date</th>
+            <th>Record Date</th>
+            <th style="text-align:right">เข้า (Drum)</th>
+            <th style="text-align:right">ออก (Drum)</th>
+            <th style="text-align:right">คงเหลือ (Drum)</th>
+            <th style="text-align:right">คงเหลือ (Kgs.)</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="foot">FP Finished Good Stock Dashboard · ข้อมูลดึงจาก Google Sheets แบบ Real-time · จัดทำด้วย Google Apps Script</footer>
+</div>
+
+<script>
+var RAW = [];              // ข้อมูลดิบทั้งหมดจาก getDashboardData()
+var FILTERED = [];         // ข้อมูลหลังผ่านตัวกรอง
+var LAST_ROWS_FOR_CHART = [];
+var AUTO_REFRESH_MS = 5 * 60 * 1000; // real-time-ish: auto refresh ทุก 5 นาที
+
+var COLORS = ['#1B5FA8','#0FB6A6','#F5A524','#E4574C','#7C5CD1','#2FA8E0','#59C87F','#D66BA0','#8AA0B8','#C08A3E','#4C8FD9','#3CC7B5'];
+
+document.addEventListener('DOMContentLoaded', function(){
+  bindEvents();
+  loadData();
+  setInterval(loadData, AUTO_REFRESH_MS);
+});
+
+function bindEvents(){
+  document.getElementById('btnRefresh').addEventListener('click', loadData);
+  document.getElementById('btnExport').addEventListener('click', exportCsv);
+  document.getElementById('btnPrint').addEventListener('click', function(){ window.print(); });
+  document.getElementById('btnReset').addEventListener('click', resetFilters);
+
+  document.getElementById('fStart').addEventListener('change', applyFilters);
+  document.getElementById('fProduct').addEventListener('change', function(){
+    populateBatchDropdown();
+    applyFilters();
+  });
+  document.getElementById('fBatch').addEventListener('change', applyFilters);
+  document.getElementById('fStatus').addEventListener('change', applyFilters);
+}
+
+function loadData(){
+  document.getElementById('lastUpdated').textContent = 'กำลังโหลดข้อมูล…';
+  google.script.run
+    .withSuccessHandler(function(res){
+      RAW = res.records || [];
+      document.getElementById('lastUpdated').textContent = 'อัปเดตล่าสุด ' + res.generatedAtDisplay;
+      populateProductDropdown();
+      populateBatchDropdown();
+      applyFilters();
+    })
+    .withFailureHandler(function(err){
+      document.getElementById('lastUpdated').textContent = 'โหลดข้อมูลไม่สำเร็จ';
+      console.error(err);
+    })
+    .getDashboardData();
+}
+
+function uniqueSorted(arr){
+  return Array.from(new Set(arr)).sort(function(a,b){ return String(a).localeCompare(String(b),'th'); });
+}
+
+function populateProductDropdown(){
+  var sel = document.getElementById('fProduct');
+  var current = sel.value;
+  var products = uniqueSorted(RAW.map(function(r){ return r.product; }));
+  sel.innerHTML = '<option value="">ทั้งหมด</option>' + products.map(function(p){
+    return '<option value="'+escapeAttr(p)+'">'+escapeHtml(p)+'</option>';
+  }).join('');
+  if (products.indexOf(current) !== -1) sel.value = current;
+}
+
+function populateBatchDropdown(){
+  var product = document.getElementById('fProduct').value;
+  var sel = document.getElementById('fBatch');
+  var current = sel.value;
+  var pool = product ? RAW.filter(function(r){ return r.product === product; }) : RAW;
+  var batches = uniqueSorted(pool.map(function(r){ return r.batch; }));
+  sel.innerHTML = '<option value="">ทั้งหมด</option>' + batches.map(function(b){
+    return '<option value="'+escapeAttr(b)+'">'+escapeHtml(b)+'</option>';
+  }).join('');
+  if (batches.indexOf(current) !== -1) sel.value = current;
+}
+
+function resetFilters(){
+  document.getElementById('fStart').value = '';
+  document.getElementById('fProduct').value = '';
+  document.getElementById('fStatus').value = '';
+  populateBatchDropdown();
+  document.getElementById('fBatch').value = '';
+  applyFilters();
+}
+
+function applyFilters(){
+  var mfgDate = document.getElementById('fStart').value;
+  var product = document.getElementById('fProduct').value;
+  var batch = document.getElementById('fBatch').value;
+  var status = document.getElementById('fStatus').value;
+
+  FILTERED = RAW.filter(function(r){
+    if (product && r.product !== product) return false;
+    if (batch && r.batch !== batch) return false;
+    if (status === 'remain' && !(r.remainDrum > 0 || r.remainKgs > 0)) return false;
+    if (status === 'empty' && (r.remainDrum > 0 || r.remainKgs > 0)) return false;
+    if (mfgDate && r.mfgDateIso !== mfgDate) return false;
+    return true;
+  });
+
+  updateKpis(product, batch);
+  renderTable(FILTERED);
+  renderCharts(FILTERED);
+}
+
+function updateKpis(product, batch){
+  var elProduct = document.getElementById('kpiProduct');
+  var elProductSub = document.getElementById('kpiProductCount');
+  var elBatch = document.getElementById('kpiBatch');
+  var elBatchSub = document.getElementById('kpiBatchSub');
+  var elRemain = document.getElementById('kpiRemain');
+  var elRemainSub = document.getElementById('kpiRemainSub');
+
+  var scopeForProduct = product ? RAW.filter(function(r){ return r.product === product; }) : RAW;
+  elProduct.textContent = product ? product : 'ทั้งหมด (' + uniqueSorted(RAW.map(function(r){return r.product;})).length + ' ประเภท)';
+  elProductSub.textContent = scopeForProduct.length;
+
+  if (batch){
+    // สำคัญ: ไม่รวมข้ามชีท — หา record ที่ product+batch ตรงกันตัวแรก (ในชีทของมันเอง)
+    var rec = RAW.filter(function(r){
+      return r.batch === batch && (!product || r.product === product);
+    })[0];
+
+    if (rec){
+      elBatch.textContent = rec.batch;
+      elBatchSub.textContent = 'Mfg. Date: ' + (rec.mfgDateDisplay || '-') + ' · ชีท: ' + rec.sheet;
+      var remain = rec.remainDrum;
+      elRemain.textContent = formatNum(remain) + ' ถัง';
+      elRemain.className = 'kpi-value ' + (remain > 0 ? 'remain-pos' : 'remain-zero');
+      elRemainSub.textContent = 'Kgs.: ' + formatNum(rec.remainKgs) + '  ·  เข้า ' + formatNum(rec.inDrum) + ' / ออก ' + formatNum(rec.outDrum) + ' ถัง';
+    }
+  } else {
+    elBatch.textContent = '— เลือก Batch ด้านบน —';
+    elBatchSub.textContent = 'Mfg. Date: -';
+    elRemain.textContent = '-';
+    elRemain.className = 'kpi-value';
+    elRemainSub.textContent = 'เลือก Product และ Batch No. เพื่อดูยอดคงเหลือเฉพาะ Batch นั้น';
+  }
+}
+
+function renderTable(rows){
+  var tbody = document.getElementById('tbody');
+  var inStock = rows.filter(function(r){ return (r.remainDrum > 0 || r.remainKgs > 0); });
+  document.getElementById('rowCount').textContent = inStock.length;
+
+  if (!inStock.length){
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">ไม่พบ Batch ที่ยังมีสต็อกคงเหลือตามเงื่อนไขที่เลือก</div></td></tr>';
+    return;
+  }
+
+  var sorted = inStock.slice().sort(function(a,b){
+    if (a.product !== b.product) return String(a.product).localeCompare(String(b.product),'th');
+    if ((a.mfgDateIso||'') !== (b.mfgDateIso||'')) return String(a.mfgDateIso||'').localeCompare(String(b.mfgDateIso||''));
+    return String(a.batch).localeCompare(String(b.batch),'th');
+  });
+
+  var html = sorted.map(function(r){
+    var remainDrumCls = r.remainDrum > 0 ? 'remain-green' : 'remain-hidden';
+    var remainKgsCls = r.remainKgs > 0 ? 'remain-green' : 'remain-hidden';
+    return '<tr>' +
+      '<td><span class="tag">'+escapeHtml(r.product)+'</span></td>' +
+      '<td>'+escapeHtml(r.batch)+'</td>' +
+      '<td>'+escapeHtml(r.mfgDateDisplay||'-')+'</td>' +
+      '<td>'+escapeHtml(r.recordDateDisplay||'-')+'</td>' +
+      '<td class="num">'+formatNum(r.inDrum)+'</td>' +
+      '<td class="num">'+formatNum(r.outDrum)+'</td>' +
+      '<td class="num '+remainDrumCls+'">'+formatNum(r.remainDrum)+'</td>' +
+      '<td class="num '+remainKgsCls+'">'+formatNum(r.remainKgs)+'</td>' +
+      '</tr>';
+  }).join('');
+  tbody.innerHTML = html;
+}
+
+function renderCharts(rows){
+  renderInOutChart(rows);
+  renderRemainPie(rows);
+}
+
+var SVG_NS = 'http://www.w3.org/2000/svg';
+
+function svgEl(tag, attrs){
+  var el = document.createElementNS(SVG_NS, tag);
+  for (var k in attrs){ el.setAttribute(k, attrs[k]); }
+  return el;
+}
+
+/* ---------- กราฟแท่งเปรียบเทียบ รับเข้า / เบิกออก รายปี (SVG ล้วน) ---------- */
+function renderInOutChart(rows){
+  var holder = document.getElementById('chartInOut');
+  holder.innerHTML = '';
+
+  var byYear = {};
+  rows.forEach(function(r){
+    var key = r.mfgDateIso ? r.mfgDateIso.substring(0,4) : 'ไม่ระบุ';
+    if (!byYear[key]) byYear[key] = { inD: 0, outD: 0 };
+    byYear[key].inD += Number(r.inDrum)||0;
+    byYear[key].outD += Number(r.outDrum)||0;
+  });
+  var keys = Object.keys(byYear).sort();
+
+  if (!keys.length){
+    holder.innerHTML = '<div class="empty-state">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</div>';
+    return;
+  }
+
+  var labels = keys.map(function(k){ return k; });
+  var dataIn = keys.map(function(k){ return round1(byYear[k].inD); });
+  var dataOut = keys.map(function(k){ return round1(byYear[k].outD); });
+
+  var W = 640, H = 300;
+  var marginLeft = 42, marginRight = 12, marginTop = 14, marginBottom = 40;
+  var plotW = W - marginLeft - marginRight;
+  var plotH = H - marginTop - marginBottom;
+
+  var maxVal = Math.max(1, Math.max.apply(null, dataIn.concat(dataOut)));
+  maxVal = niceMax(maxVal);
+
+  var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet' });
+
+  // gridlines + y labels
+  var gridCount = 4;
+  for (var g = 0; g <= gridCount; g++){
+    var val = maxVal * g / gridCount;
+    var y = marginTop + plotH - (val / maxVal) * plotH;
+    svg.appendChild(svgEl('line', { x1: marginLeft, x2: marginLeft + plotW, y1: y, y2: y, class: (g===0?'axis-line':'grid-line') }));
+    var lbl = svgEl('text', { x: marginLeft - 8, y: y + 3, class: 'axis-label', 'text-anchor': 'end' });
+    lbl.textContent = formatNum(round1(val));
+    svg.appendChild(lbl);
+  }
+
+  var n = keys.length;
+  var groupW = plotW / n;
+  var barW = Math.min(22, groupW / 2.6);
+  var gap = 3;
+
+  for (var i = 0; i < n; i++){
+    var gx = marginLeft + i * groupW + groupW/2;
+
+    var hIn = (dataIn[i] / maxVal) * plotH;
+    var xIn = gx - barW - gap/2;
+    var yIn = marginTop + plotH - hIn;
+    var rIn = svgEl('rect', { class:'bar-rect', x: xIn, y: yIn, width: barW, height: Math.max(hIn,0), rx: 4, fill: '#1B5FA8' });
+    rIn.appendChild(svgEl('title')).textContent = labels[i] + ' · รับเข้า: ' + formatNum(dataIn[i]) + ' ถัง';
+    svg.appendChild(rIn);
+
+    var hOut = (dataOut[i] / maxVal) * plotH;
+    var xOut = gx + gap/2;
+    var yOut = marginTop + plotH - hOut;
+    var rOut = svgEl('rect', { class:'bar-rect', x: xOut, y: yOut, width: barW, height: Math.max(hOut,0), rx: 4, fill: '#F5A524' });
+    rOut.appendChild(svgEl('title')).textContent = labels[i] + ' · เบิกออก: ' + formatNum(dataOut[i]) + ' ถัง';
+    svg.appendChild(rOut);
+
+    var xl = svgEl('text', {
+      x: gx, y: marginTop + plotH + 16, class:'axis-label', 'text-anchor': (n > 9 ? 'end' : 'middle'),
+      transform: n > 9 ? ('rotate(-35 ' + gx + ' ' + (marginTop + plotH + 16) + ')') : ''
+    });
+    xl.textContent = labels[i];
+    svg.appendChild(xl);
+  }
+
+  holder.appendChild(svg);
+}
+
+/* ---------- กราฟโดนัท สัดส่วนยอดคงเหลือแยกตาม Product Name (SVG ล้วน) ---------- */
+function renderRemainPie(rows){
+  var holder = document.getElementById('chartRemainPie');
+  holder.innerHTML = '';
+
+  var byProduct = {};
+  rows.forEach(function(r){
+    byProduct[r.product] = (byProduct[r.product]||0) + (Number(r.remainDrum)||0);
+  });
+  var entries = Object.keys(byProduct).map(function(k){ return [k, byProduct[k]]; }).filter(function(e){ return e[1] > 0; });
+  entries.sort(function(a,b){ return b[1]-a[1]; });
+
+  if (!entries.length){
+    holder.innerHTML = '<div class="empty-state">ไม่พบยอดคงเหลือตามเงื่อนไขที่เลือก</div>';
+    return;
+  }
+
+  var total = entries.reduce(function(s,e){ return s + e[1]; }, 0);
+  var R = 70, SW = 26, CX = 95, CY = 95;
+  var C = 2 * Math.PI * R;
+
+  var flex = document.createElement('div');
+  flex.className = 'donut-flex';
+
+  var svg = svgEl('svg', { viewBox: '0 0 190 190' });
+  var group = svgEl('g', { transform: 'rotate(-90 ' + CX + ' ' + CY + ')' });
+
+  // track background
+  group.appendChild(svgEl('circle', { cx: CX, cy: CY, r: R, fill: 'none', stroke: '#EEF2F8', 'stroke-width': SW }));
+
+  var offset = 0;
+  entries.forEach(function(e, i){
+    var frac = e[1] / total;
+    var dash = frac * C;
+    var color = COLORS[i % COLORS.length];
+    var circle = svgEl('circle', {
+      cx: CX, cy: CY, r: R, fill: 'none', stroke: color, 'stroke-width': SW,
+      'stroke-dasharray': dash + ' ' + (C - dash),
+      'stroke-dashoffset': -offset
+    });
+    circle.appendChild(svgEl('title')).textContent = e[0] + ': ' + formatNum(round1(e[1])) + ' ถัง (' + (frac*100).toFixed(1) + '%)';
+    group.appendChild(circle);
+    offset += dash;
+  });
+
+  svg.appendChild(group);
+
+  var centerVal = svgEl('text', { x: CX, y: CY - 3, class:'donut-center-val', 'text-anchor':'middle' });
+  centerVal.textContent = formatNum(round1(total));
+  svg.appendChild(centerVal);
+  var centerLbl = svgEl('text', { x: CX, y: CY + 12, class:'donut-center-lbl', 'text-anchor':'middle' });
+  centerLbl.textContent = 'รวมคงเหลือ (ถัง)';
+  svg.appendChild(centerLbl);
+
+  flex.appendChild(svg);
+
+  var legend = document.createElement('div');
+  legend.className = 'donut-legend';
+  entries.forEach(function(e, i){
+    var pct = (e[1]/total*100).toFixed(1);
+    var row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = '<span class="dot" style="background:' + COLORS[i % COLORS.length] + '"></span>' +
+      '<span class="name">' + escapeHtml(e[0]) + '</span>' +
+      '<span class="val">' + formatNum(round1(e[1])) + ' (' + pct + '%)</span>';
+    legend.appendChild(row);
+  });
+  flex.appendChild(legend);
+
+  holder.appendChild(flex);
+}
+
+function niceMax(v){
+  if (v <= 0) return 1;
+  var pow = Math.pow(10, Math.floor(Math.log(v) / Math.LN10));
+  var n = v / pow;
+  var step;
+  if (n <= 1) step = 1;
+  else if (n <= 2) step = 2;
+  else if (n <= 5) step = 5;
+  else step = 10;
+  return step * pow;
+}
+
+function exportCsv(){
+  var rows = FILTERED.length ? FILTERED : RAW;
+  var header = ['Product Name','Batch No.','Mfg. Date','Record Date','เข้า (Drum)','ออก (Drum)','คงเหลือ (Drum)','คงเหลือ (Kgs.)'];
+  var lines = [header.join(',')];
+  rows.forEach(function(r){
+    var line = [
+      csvSafe(r.product), csvSafe(r.batch), csvSafe(r.mfgDateDisplay), csvSafe(r.recordDateDisplay),
+      r.inDrum, r.outDrum, r.remainDrum, r.remainKgs
+    ];
+    lines.push(line.join(','));
+  });
+  var csvContent = '\uFEFF' + lines.join('\r\n'); // BOM รองรับภาษาไทยใน Excel
+  var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var ts = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = 'FP_Stock_Report_' + ts + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function csvSafe(v){
+  if (v === null || v === undefined) return '';
+  var s = String(v);
+  if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1){
+    s = '"' + s.replace(/"/g,'""') + '"';
+  }
+  return s;
+}
+
+function formatNum(n){
+  if (n === null || n === undefined || isNaN(n)) return '-';
+  return Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 });
+}
+function round1(n){ return Math.round(n*10)/10; }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function escapeAttr(s){ return escapeHtml(s); }
+</script>
+</body>
+</html>
